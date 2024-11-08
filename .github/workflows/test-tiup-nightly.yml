@@ -19,6 +19,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - uses: shogo82148/actions-setup-mysql@v1
+        with:
+          mysql-version: "8.0"
+          auto-start: false
 
       - name: Install TiUP
         run: |
@@ -52,16 +56,10 @@ jobs:
         run: |
           if [ "$(uname)" == "Darwin" ]; then
             source ~/.bash_profile
-            brew install mysql-client -v || true
-            echo 'export PATH="/usr/local/opt/mysql-client/bin:$PATH"' >> ~/.bash_profile
-            echo 'export LDFLAGS="-L/usr/local/opt/mysql-client/lib"' >> ~/.bash_profile
-            echo 'export CPPFLAGS="-I/usr/local/opt/mysql-client/include"' >> ~/.bash_profile
-            echo 'export PKG_CONFIG_PATH="/usr/local/opt/mysql-client/lib/pkgconfig"' >> ~/.bash_profile
-            source ~/.bash_profile
-            which mysql
           else
             source ~/.profile
           fi
+          which mysql
           mysql -h 127.0.0.1 -P 4000 -u root -e "
             SELECT * FROM information_schema.cluster_info;
           "
@@ -75,5 +73,3 @@ jobs:
             INSERT INTO t1 VALUES (1, 'test1'), (2, 'test2');
             SELECT * FROM t1;
           "
-
-
