@@ -52,6 +52,8 @@ jobs:
         run: |
           if [ "$(uname)" == "Darwin" ]; then
             source ~/.bash_profile
+            brew install mysql-client
+            which mysql
           else
             source ~/.profile
           fi
@@ -68,4 +70,5 @@ jobs:
             INSERT INTO t1 VALUES (1, 'test1'), (2, 'test2');
             SELECT * FROM t1;
           "
+
 
