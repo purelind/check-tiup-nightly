@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-12, macos-13]
+        os: [ubuntu-latest, macos-latest, macos-12]
 
     steps:
       - name: Checkout code
@@ -52,7 +52,7 @@ jobs:
         run: |
           if [ "$(uname)" == "Darwin" ]; then
             source ~/.bash_profile
-            brew install mysql-client
+            brew install mysql
             which mysql
           else
             source ~/.profile
