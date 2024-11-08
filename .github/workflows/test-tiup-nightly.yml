@@ -1,0 +1,54 @@
+name: Test TiUP Nightly Package
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'  # Run every 3 hours
+  workflow_dispatch:      # Allow manual triggering
+
+jobs:
+  test-tiup-nightly:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest， macos-12]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install TiUP
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+          source ~/.profile
+          tiup update playground
+
+      - name: Deploy TiDB Playground
+        run: |
+          source ~/.profile
+          tiup playground nightly --db 1 --pd 1 --kv 1 --without-monitor &
+          sleep 10  # Wait for the cluster to start
+
+      - name: Check Component Versions
+        run: |
+          source ~/.profile
+          mysql -h 127.0.0.1 -P 4000 -u root -e "
+            SELECT * FROM information_schema.cluster_info;
+          "
+
+      - name: Run Basic SQL Tests
+        run: |
+          mysql -h 127.0.0.1 -P 4000 -u root -e "
+            CREATE DATABASE IF NOT EXISTS test;
+            USE test;
+            CREATE TABLE IF NOT EXISTS t1 (id INT PRIMARY KEY, name VARCHAR(50));
+            INSERT INTO t1 VALUES (1, 'test1'), (2, 'test2');
+            SELECT * FROM t1;
+          "
+
+      - name: Cleanup
+        if: always()
+        run: |
+          source ~/.profile
+          tiup clean --all
+          tiup playground cleanup
