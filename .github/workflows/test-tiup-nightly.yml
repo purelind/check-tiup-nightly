@@ -1,6 +1,9 @@
 name: Test TiUP Nightly Package
 
 on:
+  push:
+    branches:
+      - 'main'
   schedule:
     - cron: '0 */3 * * *'  # Run every 3 hours
   workflow_dispatch:      # Allow manual triggering
