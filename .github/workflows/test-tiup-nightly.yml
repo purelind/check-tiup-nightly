@@ -38,7 +38,7 @@ jobs:
             source ~/.profile
           fi
           tiup playground nightly --db 1 --pd 1 --kv 1 --without-monitor &
-          sleep 10  # Wait for download completed and cluster start
+          sleep 60  # Wait for download completed and cluster start
 
           for i in {1..120}; do
             echo "Checking if the cluster is ready, attempt $i"
@@ -69,13 +69,3 @@ jobs:
             SELECT * FROM t1;
           "
 
-      - name: Cleanup
-        if: always()
-        run: |
-          if [ "$(uname)" == "Darwin" ]; then
-            source ~/.bash_profile
-          else
-            source ~/.profile
-          fi
-          tiup playground display
-          tiup clean --all
