@@ -30,7 +30,15 @@ jobs:
         run: |
           source ~/.profile
           tiup playground nightly --db 1 --pd 1 --kv 1 --without-monitor &
-          sleep 10  # Wait for the cluster to start
+          sleep 10  # Wait for download completed and cluster start
+
+          for i in {1..120}; do
+            echo "Checking if the cluster is ready, attempt $i"
+            if nc -z 127.0.0.1 4000; then
+              break
+            fi
+            sleep 1
+          done
 
       - name: Check Component Versions
         run: |
@@ -54,4 +62,3 @@ jobs:
         run: |
           source ~/.profile
           tiup clean --all
-          tiup playground cleanup
