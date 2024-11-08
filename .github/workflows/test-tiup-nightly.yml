@@ -23,12 +23,20 @@ jobs:
       - name: Install TiUP
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-          source ~/.profile
+          if [ "$(uname)" == "Darwin" ]; then
+            source ~/.bash_profile
+          else
+            source ~/.profile
+          fi
           tiup update playground
 
       - name: Deploy TiDB Playground
         run: |
-          source ~/.profile
+          if [ "$(uname)" == "Darwin" ]; then
+            source ~/.bash_profile
+          else
+            source ~/.profile
+          fi
           tiup playground nightly --db 1 --pd 1 --kv 1 --without-monitor &
           sleep 10  # Wait for download completed and cluster start
 
@@ -42,7 +50,11 @@ jobs:
 
       - name: Check Component Versions
         run: |
-          source ~/.profile
+          if [ "$(uname)" == "Darwin" ]; then
+            source ~/.bash_profile
+          else
+            source ~/.profile
+          fi
           mysql -h 127.0.0.1 -P 4000 -u root -e "
             SELECT * FROM information_schema.cluster_info;
           "
@@ -60,5 +72,10 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          source ~/.profile
+          if [ "$(uname)" == "Darwin" ]; then
+            source ~/.bash_profile
+          else
+            source ~/.profile
+          fi
+          tiup playground display
           tiup clean --all
