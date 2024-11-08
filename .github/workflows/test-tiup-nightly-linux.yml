@@ -1,4 +1,4 @@
-name: Test TiUP Nightly Package
+name: Test TiUP Nightly Package on Linux
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
 
     steps:
       - name: Checkout code
@@ -27,20 +27,12 @@ jobs:
       - name: Install TiUP
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-          if [ "$(uname)" == "Darwin" ]; then
-            source ~/.bash_profile
-          else
-            source ~/.profile
-          fi
+          source ~/.profile
           tiup update playground
 
       - name: Deploy TiDB Playground
         run: |
-          if [ "$(uname)" == "Darwin" ]; then
-            source ~/.bash_profile
-          else
-            source ~/.profile
-          fi
+          source ~/.profile
           tiup playground nightly --db 1 --pd 1 --kv 1 --without-monitor &
           sleep 60  # Wait for download completed and cluster start
 
@@ -54,11 +46,7 @@ jobs:
 
       - name: Check Component Versions
         run: |
-          if [ "$(uname)" == "Darwin" ]; then
-            source ~/.bash_profile
-          else
-            source ~/.profile
-          fi
+          source ~/.profile
           which mysql
           mysql -h 127.0.0.1 -P 4000 -u root -e "
             SELECT * FROM information_schema.cluster_info;
