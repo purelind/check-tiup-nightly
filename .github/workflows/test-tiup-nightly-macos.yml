@@ -37,7 +37,6 @@ jobs:
 
       - name: Deploy TiDB Playground
         run: |
-          if [ "$(uname)" == "Darwin" ]; then
           source ~/.bash_profile
           tiup playground nightly --db 1 --pd 1 --kv 1 --without-monitor &
           sleep 60  # Wait for download completed and cluster start
