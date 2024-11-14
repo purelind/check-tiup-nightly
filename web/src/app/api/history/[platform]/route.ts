@@ -4,11 +4,9 @@ const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5050';
 
 export async function GET(
   request: NextRequest,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  context: any
+  { params }: { params: Promise<{ platform: string }> }
 ) {
-  
-  const { platform } = context.params;
+  const platform = (await params).platform;
   const searchParams = request.nextUrl.searchParams;
   const days = searchParams.get('days') || '1';
 
