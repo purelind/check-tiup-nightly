@@ -6,6 +6,7 @@ from datetime import datetime
 import logging
 import platform
 import sys
+import json
 
 
 class TiupChecker:
@@ -278,10 +279,11 @@ class TiupChecker:
         }
 
         try:
+            print(json.dumps(payload, indent=2))
             response = requests.post(self.api_endpoint, json=payload)
             response.raise_for_status()
             self.logger.info("Check report sent successfully")
-            self.logger.debug(f"Report payload: {payload}")
+            self.logger.debug(f"Report payload: {json.dumps(payload)}")
             return True
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to send report: {e}")
