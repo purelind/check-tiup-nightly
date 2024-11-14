@@ -44,7 +44,6 @@ init_db()
 def report_status():
     """Receive check report"""
     data = request.json
-    print(data)
     conn = get_db_connection()
     c = conn.cursor()
     
@@ -114,10 +113,6 @@ def get_results():
                 FROM RankedResults
                 WHERE rn = 1
             ''', VALID_PLATFORMS)
-        # for description in c.description:
-        #     print(description[0])
-
-        # print(c.fetchall())
         results = c.fetchall()
         
         # Parse JSON error information stored in the database
@@ -162,8 +157,7 @@ def get_platform_history(platform):
             ORDER BY timestamp DESC
         ''', (platform, days_ago.isoformat()))
         
-        columns = [description[0] for description in c.description]
-        results = [dict(zip(columns, row)) for row in c.fetchall()]
+        results = c.fetchall()
         
         # Parse JSON error information stored in the database
         for result in results:
