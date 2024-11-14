@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5050';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { platform: string } }
@@ -10,7 +12,7 @@ export async function GET(
 
   try {
     const response = await fetch(
-      `http://localhost:5050/platforms/${platform}/history?days=${days}`
+      `${API_BASE_URL}/platforms/${platform}/history?days=${days}`
     );
     const data = await response.json();
     return NextResponse.json(data);

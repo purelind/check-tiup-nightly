@@ -7,12 +7,13 @@ import logging
 import platform
 import sys
 import json
+import os
 
 
 class TiupChecker:
     def __init__(self):
         self.logger = self._setup_logger()
-        self.api_endpoint = "http://localhost:5050/status"
+        self.api_endpoint = os.getenv('API_ENDPOINT', 'http://localhost:5050/status')
         self.errors = []
         self.platform_info = self._get_platform_info()
         self.component_versions = {}
