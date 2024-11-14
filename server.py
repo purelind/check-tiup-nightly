@@ -3,17 +3,18 @@ import mysql.connector
 from mysql.connector import Error
 from datetime import datetime, timedelta
 import json
+import os
 
 app = Flask(__name__)
 
 def get_db_connection():
-    """Get MySQL database connection"""
+    """Get MySQL database connection with parameters from environment variables"""
     return mysql.connector.connect(
-        host="localhost",  # Change this to your MySQL host
-        user="root",  # Change this
-        password="",  # Change this
-        port=4000,
-        database="tiup_checks"
+        host=os.getenv('MYSQL_HOST', 'localhost'),
+        user=os.getenv('MYSQL_USER', 'root'),
+        password=os.getenv('MYSQL_PASSWORD', ''),
+        port=int(os.getenv('MYSQL_PORT', '4000')),
+        database=os.getenv('MYSQL_DATABASE', 'tiup_checks')
     )
 
 def init_db():
