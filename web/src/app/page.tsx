@@ -1,7 +1,7 @@
 'use client';  // 因为我们使用了 useState，需要标记为客户端组件
 
 import { useEffect, useState } from 'react';
-import { CheckResult, ComponentsInfo, ComponentInfo } from '../types';
+import { CheckResult, ComponentsInfo} from '../types';
 import Link from 'next/link';
 
 export default function HomePage() {

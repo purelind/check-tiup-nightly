@@ -11,6 +11,12 @@ export interface ComponentsInfo {
   tiflash?: ComponentInfo;
 }
 
+export interface ErrorDetail {
+  stage: string;
+  error: string;
+  timestamp: string;
+}
+
 export interface CheckResult {
   id: number;
   platform: string;
@@ -20,6 +26,6 @@ export interface CheckResult {
   python_version: string;
   os: string;
   arch: string;
-  errors?: any;
+  errors?: ErrorDetail[];
   components_info?: string | null;
 }
