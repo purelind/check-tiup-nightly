@@ -11,7 +11,6 @@ export default function HomePage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        // 修改这里的 URL
         const response = await fetch('/api/results');
         const data = await response.json();
         console.log(data);
@@ -24,9 +23,6 @@ export default function HomePage() {
     };
 
     fetchResults();
-    // 每60秒刷新一次
-    const interval = setInterval(fetchResults, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const allSuccessful = results.every(r => r.status === 'success');
