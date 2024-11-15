@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { CheckResult,  } from '@/types';
+import { CheckResult } from '@/types';
 import Link from 'next/link';
 
 export default function PlatformHistory() {
