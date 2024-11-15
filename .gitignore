@@ -174,3 +174,32 @@ lerna-debug.log*
 .pnpm-debug.log*
 
 node_modules/
+
+ 构建输出
+/build/
+/dist/
+
+# 依赖
+/vendor/
+
+# 日志
+/logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 环境变量
+.env
+.env.local
+
+# 测试覆盖率
+coverage.out
+
