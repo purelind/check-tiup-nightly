@@ -17,8 +17,6 @@ LOG_DIR := $(ROOT_DIR)/logs
 
 # Frontend configuration
 FRONTEND_DIR := web
-API_BASE_URL ?= http://localhost:5050
-NODE_ENV ?= development
 
 # Binary files
 SERVER_BINARY := $(BUILD_DIR)/server
