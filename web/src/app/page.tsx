@@ -1,7 +1,7 @@
 'use client';  // 因为我们使用了 useState，需要标记为客户端组件
 
 import { useEffect, useState } from 'react';
-import { CheckResult, ComponentsInfo} from '../types';
+import { CheckResult, ComponentInfo } from '../types';
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -91,26 +91,16 @@ export default function HomePage() {
               
               <div className="space-y-2 text-sm text-gray-600">
                 <p>检查时间: {new Date(result.timestamp).toLocaleString()}</p>
-                <p>TiUP 版本: {result.tiup_version.split(' ')[0]}</p>
+                <p>TiUP 版本: {result.version.tiup}</p>
+                {result.version.python && <p>Python 版本: {result.version.python}</p>}
                 
-                {/* 添加组件信息展示 */}
-              {result.components_info && (
-                <div className="mt-4">
-                  <p className="font-medium text-gray-700 mb-2">组件信息:</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {(() => {
-                      let componentsData: ComponentsInfo | null = null;
-                      try {
-                        componentsData = result.components_info ? JSON.parse(result.components_info) : null;
-                      } catch (e) {
-                        console.error('Failed to parse components info:', e);
-                        return null;
-                      }
-
-                      if (!componentsData) return null;
-
-                      return ['tidb', 'pd', 'tikv', 'tiflash'].map((component) => {
-                        const info = componentsData[component as keyof ComponentsInfo];
+                {/* 组件信息展示 */}
+                {result.version.components && Object.keys(result.version.components).length > 0 && (
+                  <div className="mt-4">
+                    <p className="font-medium text-gray-700 mb-2">组件信息:</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {['tidb', 'pd', 'tikv', 'tiflash'].map((component) => {
+                        const info = result.version.components?.[component];
                         return info ? (
                           <div key={component} className="bg-gray-50 rounded-lg p-3">
                             <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
@@ -127,51 +117,8 @@ export default function HomePage() {
                             </div>
                           </div>
                         ) : null;
-                      });
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {/* 当没有组件信息时显示提示 */}
-              {!result.components_info && result.status === 'success' && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500">暂无组件信息</p>
-                </div>
-              )}
-                {result.errors && (
-                  <div className="mt-4">
-                    <p className="text-red-600 font-medium mb-2">错误信息:</p>
-                    {Array.isArray(result.errors) ? result.errors.map((error, index) => (
-                      <div key={index} className="mb-2 bg-red-50 rounded-lg p-4 border border-red-100">
-                        {error.error && (
-                          <div className="mb-2">
-                            <span className="font-medium">错误原因：</span>
-                            <span className="text-red-700">{error.error}</span>
-                          </div>
-                        )}
-                        {error.stage && (
-                          <div className="mb-2">
-                            <span className="font-medium">错误阶段：</span>
-                            <span className="text-gray-700">{error.stage}</span>
-                          </div>
-                        )}
-                        {error.timestamp && (
-                          <div>
-                            <span className="font-medium">发生时间：</span>
-                            <span className="text-gray-700">
-                              {new Date(error.timestamp).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )) : (
-                      <div className="bg-red-50 rounded-lg p-4 border border-red-100">
-                        <pre className="text-sm text-red-700 whitespace-pre-wrap break-words">
-                          {JSON.stringify(result.errors, null, 2)}
-                        </pre>
-                      </div>
-                    )}
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

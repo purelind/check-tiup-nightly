@@ -12,7 +12,7 @@ export async function GET(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/platforms/${platform}/history?days=${days}`
+      `${API_BASE_URL}/api/v1/platforms/${platform}/results?days=${days}`
     );
 
     if (!response.ok) {

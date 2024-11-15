@@ -4,17 +4,16 @@ export interface ComponentInfo {
   git_hash: string;
 }
 
-export interface ComponentsInfo {
-  tidb?: ComponentInfo;
-  pd?: ComponentInfo;
-  tikv?: ComponentInfo;
-  tiflash?: ComponentInfo;
-}
-
 export interface ErrorDetail {
   stage: string;
   error: string;
   timestamp: string;
+}
+
+export interface VersionInfo {
+  tiup: string;
+  python?: string;
+  components?: Record<string, ComponentInfo>;
 }
 
 export interface CheckResult {
@@ -22,10 +21,8 @@ export interface CheckResult {
   platform: string;
   status: 'success' | 'failed';
   timestamp: string;
-  tiup_version: string;
-  python_version: string;
   os: string;
   arch: string;
   errors?: ErrorDetail[];
-  components_info?: string | null;
+  version: VersionInfo;
 }
