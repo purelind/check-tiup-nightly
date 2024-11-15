@@ -1,66 +1,158 @@
-.PHONY: install run test clean lint help server
+# Build parameters
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+GO_BUILD_FLAGS = -v
 
-# 默认 Python 解释器
-PYTHON := python3
-# 默认端口
-PORT := 5050
+# Project information
+PROJECT_NAME := tiup-checker
+VERSION ?= $(shell git describe --tags --always --dirty)
+COMMIT_HASH ?= $(shell git rev-parse --short HEAD)
+BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
+# Directory structure
+ROOT_DIR := $(shell pwd)
+BUILD_DIR := $(ROOT_DIR)/build
+DIST_DIR := $(ROOT_DIR)/dist
+LOG_DIR := $(ROOT_DIR)/logs
+
+# Frontend configuration
 FRONTEND_DIR := web
 API_BASE_URL ?= http://localhost:5050
+NODE_ENV ?= development
 
-help:
-	@echo "Available commands:"
-	@echo "  make install    - Install required dependencies"
-	@echo "  make run       - Run the TiUP checker"
-	@echo "  make server    - Run the Flask server"
-	@echo "  make lint      - Run code linting"
-	@echo "  make clean     - Clean up generated files"
-	@echo "  make test      - Run tests"
-	@echo "  Frontend commands:"
-	@echo "    make frontend-install - Install frontend dependencies"
-	@echo "    make frontend-dev    - Run frontend development server"
-	@echo "    make frontend-build  - Build frontend for production"
-	@echo "    make frontend-clean  - Clean frontend build files"
+# Binary files
+SERVER_BINARY := $(BUILD_DIR)/server
+CHECKER_BINARY := $(BUILD_DIR)/checker
 
-install:
-	$(PYTHON) -m pip install -r requirements.txt
 
-# 添加到现有的 Makefile 中
-run:
-	API_ENDPOINT=${API_ENDPOINT} $(PYTHON) tiup_checker.py
+# Go build flags
+LD_FLAGS := -X main.Version=$(VERSION) \
+            -X main.CommitHash=$(COMMIT_HASH) \
+            -X main.BuildTime=$(BUILD_TIME)
 
-# 添加一个便捷的本地运行命令
-run-local:
-	API_ENDPOINT=http://localhost:5050/status $(PYTHON) tiup_checker.py
+# Color output
+BLUE := \033[34m
+GREEN := \033[32m
+RED := \033[31m
+YELLOW := \033[33m
+NC := \033[0m # No Color
 
-server:
-	FLASK_APP=server.py FLASK_DEBUG=1 $(PYTHON) server.py
+.PHONY: all build clean test lint docker help frontend-* dev
 
-lint:
-	flake8 *.py
-	black *.py
+## Default target
+all: build frontend-build ## Build backend and frontend
 
-clean:
-	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -delete
-	rm -f tiup_checker.log
+## Build-related targets
+build: prepare $(SERVER_BINARY) $(CHECKER_BINARY) ## Build backend binaries
 
-test:
-	$(PYTHON) -m pytest tests/
+$(SERVER_BINARY): ## Build server
+	@printf "$(BLUE)Building server binary...$(NC)\n"
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
+		$(GO_BUILD_FLAGS) \
+		-ldflags "$(LD_FLAGS)" \
+		-o $@ \
+		./cmd/server
+	@printf "$(GREEN)Server binary built successfully$(NC)\n"
 
-# 创建 requirements.txt
-requirements:
-	$(PYTHON) -m pip freeze > requirements.txt
+$(CHECKER_BINARY): ## Build checker
+	@printf "$(BLUE)Building checker binary...$(NC)\n"
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
+		$(GO_BUILD_FLAGS) \
+		-ldflags "$(LD_FLAGS)" \
+		-o $@ \
+		./cmd/checker
+	@printf "$(GREEN)Checker binary built successfully$(NC)\n"
 
-frontend-install:
+prepare: ## Prepare build environment
+	@mkdir -p $(BUILD_DIR) $(DIST_DIR) $(LOG_DIR)
+	@printf "$(GREEN)Build directories created$(NC)\n"
+
+## Frontend-related targets
+frontend-install: ## Install frontend dependencies
+	@printf "$(BLUE)Installing frontend dependencies...$(NC)\n"
 	cd $(FRONTEND_DIR) && npm install
+	@printf "$(GREEN)Frontend dependencies installed$(NC)\n"
 
-frontend-dev:
-	cd $(FRONTEND_DIR) && API_BASE_URL=$(API_BASE_URL) && npm run dev
+frontend-dev: ## Run frontend development server
+	@printf "$(BLUE)Starting frontend development server...$(NC)\n"
+	cd $(FRONTEND_DIR) && \
+	API_BASE_URL=$(API_BASE_URL) \
+	NODE_ENV=development \
+	npm run dev
 
-frontend-build:
-	cd $(FRONTEND_DIR) && API_BASE_URL=$(API_BASE_URL) && npm run build
+frontend-build: ## Build frontend for production
+	@printf "$(BLUE)Building frontend for production...$(NC)\n"
+	cd $(FRONTEND_DIR) && \
+	API_BASE_URL=$(API_BASE_URL) \
+	NODE_ENV=production \
+	npm run build
+	@printf "$(GREEN)Frontend built successfully$(NC)\n"
 
-frontend-clean:
+
+frontend-clean: ## Clean frontend build files
+	@printf "$(BLUE)Cleaning frontend build files...$(NC)\n"
 	rm -rf $(FRONTEND_DIR)/.next
 	rm -rf $(FRONTEND_DIR)/node_modules
+	rm -rf $(FRONTEND_DIR)/.cache
+	@printf "$(GREEN)Frontend cleaned$(NC)\n"
+
+## Development-related targets
+dev: ## Start development environment (frontend & backend)
+	@printf "$(BLUE)Starting development environment...$(NC)\n"
+	make -j2 dev-server dev-frontend
+
+dev-server: build ## Start backend development server
+	@printf "$(BLUE)Starting backend server...$(NC)\n"
+	$(SERVER_BINARY) -config $(CONFIG_DIR)/config.yaml
+
+dev-frontend: frontend-install ## Start frontend development server
+	@printf "$(BLUE)Starting frontend development server...$(NC)\n"
+	make frontend-dev
+
+## Test-related targets
+test: test-backend
+
+test-backend: ## Run backend tests
+	@printf "$(BLUE)Running backend tests...$(NC)\n"
+	go test -v -race -cover ./...
+	@printf "$(GREEN)Backend tests completed$(NC)\n"
+
+## Cleanup-related targets
+clean: clean-backend clean-frontend ## Clean all build files
+
+clean-backend: ## Clean backend build files
+	@printf "$(BLUE)Cleaning backend build files...$(NC)\n"
+	rm -rf $(BUILD_DIR) $(DIST_DIR)
+	@printf "$(GREEN)Backend cleaned$(NC)\n"
+
+clean-frontend: ## Clean frontend build files
+	@printf "$(BLUE)Cleaning frontend build files...$(NC)\n"
+	make frontend-clean
+	@printf "$(GREEN)Frontend cleaned$(NC)\n"
+
+## Run-related targets
+run-server: $(SERVER_BINARY) ## Run server
+	@printf "$(BLUE)Starting server...$(NC)\n"
+	$(SERVER_BINARY) -config $(CONFIG_DIR)/config.yaml
+
+run-checker: $(CHECKER_BINARY) ## Run checker
+	@printf "$(BLUE)Starting checker...$(NC)\n"
+	$(CHECKER_BINARY) -config $(CONFIG_DIR)/config.yaml
+
+## Help
+help: ## Show help information
+	@printf "$(BLUE)Available targets:$(NC)\n"
+	@printf "\n$(YELLOW)Usage:$(NC)\n"
+	@printf "  make $(GREEN)<target>$(NC)\n\n"
+	@printf "$(YELLOW)Targets:$(NC)\n"
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*?##/ { printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	@printf "\n$(YELLOW)Frontend-specific targets:$(NC)\n"
+	@printf "  $(GREEN)frontend-install$(NC)    Install frontend dependencies\n"
+	@printf "  $(GREEN)frontend-dev$(NC)        Run frontend development server\n"
+	@printf "  $(GREEN)frontend-build$(NC)      Build frontend for production\n"
+	@printf "  $(GREEN)frontend-lint$(NC)       Run frontend code linting\n"
+	@printf "  $(GREEN)frontend-test$(NC)       Run frontend tests\n"
+	@printf "  $(GREEN)frontend-clean$(NC)      Clean frontend build files\n"
+
+# Set default target
+.DEFAULT_GOAL := help
