@@ -15,19 +15,16 @@ import (
 )
 
 func main() {
-	// 命令行参数
-	// configPath := flag.String("config", "", "path to config file")
 	flag.Parse()
 
-	// 加载配置
 	cfg := config.Load()
 
-	// 初始化日志
+	// initialize logger
 	if err := logger.Init(cfg.LogPath); err != nil {
 		panic("failed to initialize logger: " + err.Error())
 	}
 
-	// 初始化数据库连接
+	// initialize database connection
 	db, err := database.New(database.Config{
 		Host:     cfg.MySQL.Host,
 		Port:     cfg.MySQL.Port,
@@ -41,29 +38,29 @@ func main() {
 	}
 	defer db.Close()
 
-	// 初始化数据库schema
+	// initialize database schema
 	ctx := context.Background()
 	if err := db.InitSchema(ctx); err != nil {
 		logger.Error("Failed to initialize database schema:", err)
 		os.Exit(1)
 	}
 
-	// 创建并启动服务器
+	// create and start server
 	srv := server.New(db, cfg.Server.Port)
 
-	// 优雅关闭处理
+	// graceful shutdown handler
 	go func() {
 		if err := srv.Start(); err != nil {
 			logger.Error("Server error:", err)
 		}
 	}()
 
-	// 等待中断信号
+	// wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	// 优雅关闭
+	// graceful shutdown
 	logger.Info("Shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

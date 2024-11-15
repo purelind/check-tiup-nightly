@@ -18,20 +18,17 @@ type Server struct {
 }
 
 func New(db *database.DB, port int) *Server {
-	// 设置 gin 模式
 	gin.SetMode(gin.ReleaseMode)
 
 	engine := gin.New()
 
-	// 使用 gin 的中间件
 	engine.Use(gin.Recovery())
 	engine.Use(RequestLogger())
 	engine.Use(ErrorHandler())
 
-	// 创建处理器
 	h := NewHandler(db)
 
-	// 注册路由
+	// register routes
 	api := engine.Group("/api/v1")
 	{
 		api.POST("/status", h.ReportStatus)
@@ -65,17 +62,17 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-// 自定义中间件：请求日志
+// custom middleware: request logger
 func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
 
-		// 处理请求
+		// process request
 		c.Next()
 
-		// 请求处理完成后记录日志
+		// log after request processed
 		if raw != "" {
 			path = path + "?" + raw
 		}
@@ -91,17 +88,17 @@ func RequestLogger() gin.HandlerFunc {
 	}
 }
 
-// 自定义中间件：错误处理
+// custom middleware: error handler
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 
-		// 检查是否有错误
+		// check if there are errors
 		if len(c.Errors) > 0 {
-			// 获取最后一个错误
+			// get the last error
 			err := c.Errors.Last()
 
-			// 根据错误类型返回适当的响应
+			// return appropriate response based on error type
 			switch e := err.Err.(type) {
 			case *Error:
 				c.JSON(e.Status, gin.H{

@@ -23,20 +23,20 @@ type Config struct {
 func Load() *Config {
     cfg := &Config{}
     
-    // MySQL配置
+    // MySQL configuration
     cfg.MySQL.Host = getEnv("MYSQL_HOST", "localhost")
     cfg.MySQL.User = getEnv("MYSQL_USER", "root")
     cfg.MySQL.Password = getEnv("MYSQL_PASSWORD", "")
     cfg.MySQL.Port = getEnvInt("MYSQL_PORT", 4000)
     cfg.MySQL.Database = getEnv("MYSQL_DATABASE", "tiup_checks")
     
-    // 服务器配置
+    // server configuration
     cfg.Server.Port = getEnvInt("SERVER_PORT", 5050)
 
-    // API配置
+    // API configuration
     cfg.APIEndpoint = getEnv("API_ENDPOINT", "http://localhost:5050/api/v1/status")
     
-    // 日志配置
+    // log configuration
     cfg.LogPath = getEnv("LOG_PATH", "logs/tiup_checker.log")
     
     return cfg

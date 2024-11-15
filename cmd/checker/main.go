@@ -12,24 +12,19 @@ import (
 )
 
 func main() {
-	// 命令行参数
-	// configPath := flag.String("config", "", "path to config file")
 	timeout := flag.Duration("timeout", 10*time.Minute, "checker timeout duration")
 	flag.Parse()
 
-	// 加载配置
 	cfg := config.Load()
 
-	// 初始化日志
 	if err := logger.Init(cfg.LogPath); err != nil {
 		panic("failed to initialize logger: " + err.Error())
 	}
-
-	// 创建上下文，支持超时控制
+	// create context with timeout control
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 
-	// 创建并运行检查器
+	// create and run checker
 	c := checker.NewChecker(cfg)
 	success := c.Run(ctx)
 

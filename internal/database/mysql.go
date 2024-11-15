@@ -17,7 +17,7 @@ type DB struct {
 	db *sql.DB
 }
 
-// 数据库配置
+// database configuration
 type Config struct {
 	Host     string
 	Port     int
@@ -56,12 +56,12 @@ func New(cfg Config) (*DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// 设置连接池参数
+	// set connection pool parameters
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	// 验证连接
+	// validate database connection
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
@@ -73,7 +73,7 @@ func (db *DB) Close() error {
 	return db.db.Close()
 }
 
-// 初始化数据库表
+// initialize database table
 func (db *DB) InitSchema(ctx context.Context) error {
 	query := `
         CREATE TABLE IF NOT EXISTS check_results (
@@ -99,7 +99,7 @@ func (db *DB) InitSchema(ctx context.Context) error {
 	return nil
 }
 
-// 保存检查结果
+// save check result
 func (db *DB) SaveCheckResult(ctx context.Context, report *checker.CheckReport) error {
 	query := `
         INSERT INTO check_results 
@@ -107,7 +107,7 @@ func (db *DB) SaveCheckResult(ctx context.Context, report *checker.CheckReport) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
 
-	// 序列化JSON字段
+	// serialize JSON fields
 	errorsJSON, err := json.Marshal(report.Errors)
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
@@ -137,7 +137,7 @@ func (db *DB) SaveCheckResult(ctx context.Context, report *checker.CheckReport) 
 	return nil
 }
 
-// GetLatestResults 获取所有平台的最新结果
+// GetLatestResults get the latest results of all platforms
 func (db *DB) GetLatestResults(ctx context.Context) ([]checker.CheckReport, error) {
 	query := `
         WITH RankedResults AS (
@@ -160,7 +160,7 @@ func (db *DB) GetLatestResults(ctx context.Context) ([]checker.CheckReport, erro
 	return db.queryResults(ctx, query, args...)
 }
 
-// GetPlatformResults 获取指定平台的最近结果
+// GetPlatformResults get the latest results of a specified platform
 func (db *DB) GetPlatformResults(ctx context.Context, params QueryParams) ([]checker.CheckReport, error) {
 	var query string
 	var args []interface{}
@@ -187,7 +187,7 @@ func (db *DB) GetPlatformResults(ctx context.Context, params QueryParams) ([]che
 	return db.queryResults(ctx, query, args...)
 }
 
-// 查询平台历史记录
+// GetPlatformHistory get the history records of a specified platform
 func (db *DB) GetPlatformHistory(ctx context.Context, params QueryParams) ([]checker.CheckReport, error) {
 	query := `
         SELECT * FROM check_results 
@@ -200,7 +200,7 @@ func (db *DB) GetPlatformHistory(ctx context.Context, params QueryParams) ([]che
 	return db.queryResults(ctx, query, params.Platform, daysAgo)
 }
 
-// 通用查询结果处理
+// common query results processing
 func (db *DB) queryResults(ctx context.Context, query string, args ...interface{}) ([]checker.CheckReport, error) {
 	rows, err := db.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -234,7 +234,7 @@ func (db *DB) queryResults(ctx context.Context, query string, args ...interface{
 
 		report.Timestamp = timestamp
 
-		// 解析JSON字段
+		// parse JSON fields
 		if errorsJSON.Valid {
 			if err := json.Unmarshal([]byte(errorsJSON.String), &report.Errors); err != nil {
 				logger.Error("Failed to unmarshal errors JSON:", err)

@@ -18,7 +18,7 @@ func NewHandler(db *database.DB) *Handler {
 	return &Handler{db: db}
 }
 
-// Error 自定义错误类型
+// Error custom error type
 type Error struct {
 	Status  int
 	Message string
@@ -78,9 +78,9 @@ func (h *Handler) GetPlatformResults(c *gin.Context) {
 		Days: 0,
 	}
 
-	// 解析查询参数
+	// parse query parameters
 	if days := c.Query("days"); days != "" {
-		// 按天数查询
+		// query by days
 		if val, err := strconv.Atoi(days); err == nil && val > 0 {
 			params.Days = val
 			params.QueryType = database.QueryByDays
@@ -89,7 +89,7 @@ func (h *Handler) GetPlatformResults(c *gin.Context) {
 			return
 		}
 	} else if limit := c.Query("limit"); limit != "" {
-		// 按数量查询
+		// query by limit
 		if val, err := strconv.Atoi(limit); err == nil && val > 0 {
 			params.Limit = val
 			params.QueryType = database.QueryByLimit
@@ -99,19 +99,19 @@ func (h *Handler) GetPlatformResults(c *gin.Context) {
 			return
 		}
 	} else {
-		// 默认查询最近10条记录
+		// default query the latest 10 records
 		params.Limit = 10
 		params.QueryType = database.QueryByLimit
 		params.Days = 0
 	}
 
-	// 添加调试日志
+	// add debug log
 	logger.Info("Query params:", params)
 
 	results, err := h.db.GetPlatformResults(c.Request.Context(), params)
 	if err != nil {
 		logger.Error("Failed to get platform results:", err)
-		// 输出更详细的错误信息
+		// output more detailed error information
 		logger.Error("Detailed error:", err.Error())
 		c.Error(NewError(http.StatusInternalServerError, "Failed to fetch platform results"))
 		return
@@ -134,7 +134,7 @@ func (h *Handler) GetPlatformHistory(c *gin.Context) {
 		return
 	}
 
-	days := 1 // 默认值
+	days := 1 // default value
 	if d := c.Query("days"); d != "" {
 		if val, err := strconv.Atoi(d); err == nil && val > 0 {
 			days = val

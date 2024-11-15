@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"os"
 	"encoding/json"
 	"net/http"
 	"bytes"
@@ -44,7 +43,6 @@ func getPlatformInfo() PlatformInfo {
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 
-	// 规范化架构名称
 	if arch == "x86_64" {
 		arch = "amd64"
 	}
@@ -69,13 +67,12 @@ func (c *Checker) recordError(stage, errMsg string) {
 func (c *Checker) checkTiUPDownload(ctx context.Context) error {
 	logger.Info("Starting TiUP download check")
 
-	// 更新 TiUP 自身
 	if err := c.runCommand(ctx, "tiup", "update", "--self"); err != nil {
 		c.recordError("download", fmt.Sprintf("Failed to update TiUP: %v", err))
 		return err
 	}
 
-	// 安装所需组件
+	// check nightly components
 	components := []string{
 		"tidb:nightly",
 		"tikv:nightly",
@@ -101,7 +98,6 @@ func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 
 	cmd := exec.CommandContext(ctx, "tiup", "playground", "nightly")
 
-	// 设置输出管道
 	_, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stdout pipe: %v", err)
@@ -112,15 +108,14 @@ func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 		return nil, fmt.Errorf("failed to create stderr pipe: %v", err)
 	}
 
-	// 启动进程
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start playground: %v", err)
 	}
 
-	// 等待初始化
+	// wait for initialization
 	time.Sleep(10 * time.Second)
 
-	// 检查数据库连接
+	// check database connection
 	db, err := sql.Open("mysql", fmt.Sprintf("root@tcp(127.0.0.1:4000)/"))
 	if err != nil {
 		c.recordError("playground", "Failed to connect to TiDB")
@@ -128,14 +123,14 @@ func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 	}
 	defer db.Close()
 
-	// 尝试连接12次，每次间隔10秒
+	// try to connect 12 times, with 10 seconds interval
 	for i := 0; i < 12; i++ {
 		if err := db.Ping(); err == nil {
 			logger.Info("Successfully connected to TiDB")
 			return cmd, nil
 		}
 
-		// 检查进程是否已退出
+		// check if the process has exited
 		if cmd.ProcessState != nil {
 			c.recordError("playground", "Playground process exited unexpectedly")
 			return nil, fmt.Errorf("playground process exited")
@@ -157,7 +152,7 @@ func (c *Checker) runSmokeTest(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	// 基础SQL测试
+	// basic SQL tests
 	tests := []struct {
 		name string
 		sql  string
@@ -221,13 +216,13 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 		logger.Info(fmt.Sprintf("Component: %s, Version: %s, GitHash: %s", 
 			componentType, version, gitHash))
 
-		// 验证Git hash
+		// validate git hash
 		if len(gitHash) != 40 {
 			c.recordError("version_check", fmt.Sprintf("Invalid git hash for %s: %s", componentType, gitHash))
 			return fmt.Errorf("invalid git hash")
 		}
 
-		// 提取基础版本
+		// extract base version
 		baseVersion := extractBaseVersion(version)
 
 		c.versions.Components[componentType] = ComponentVersion{
@@ -257,7 +252,7 @@ func (c *Checker) Run(ctx context.Context) bool {
 	status := "success"
 	var playground *exec.Cmd
 
-	// 下载检查
+	// download components check
 	logger.Info("Step 1: Checking TiUP downloads...")
 	if err := c.checkTiUPDownload(ctx); err != nil {
 		logger.Error(fmt.Sprintf("Download check failed: %v", err))
@@ -266,16 +261,16 @@ func (c *Checker) Run(ctx context.Context) bool {
 	}
 	logger.Info("Download check completed successfully")
 
-	// 清理 tiup playground 进程
+	// clean up tiup playground process
 	defer func() {
 		if playground != nil && playground.Process != nil {
 			logger.Info("Cleaning up: Gracefully stopping playground process")
-			// 首先发送 SIGTERM
+			// first send SIGTERM
 			if err := playground.Process.Signal(syscall.SIGTERM); err != nil {
 				logger.Error(fmt.Sprintf("Failed to send SIGTERM: %v", err))
 			}
 
-			// 给予进程最多10秒的时间来清理
+			// give the process up to 10 seconds to clean up
 			done := make(chan error, 1)
 			go func() {
 				done <- playground.Wait()
@@ -324,7 +319,7 @@ func (c *Checker) Run(ctx context.Context) bool {
 		logger.Info("Report sent successfully")
 	}
 
-	// 在发送报告后发送通知
+	// send notification after sending report
 	if len(c.errors) > 0 {
 		errors := make([]notify.ErrorDetail, 0, len(c.errors))
 		for _, err := range c.errors {
@@ -346,7 +341,7 @@ func (c *Checker) Run(ctx context.Context) bool {
 	}
 }
 
-// 辅助函数
+// helper functions
 func isValidComponent(component string) bool {
 	validComponents := map[string]bool{
 		"tidb":    true,
@@ -374,12 +369,6 @@ func (c *Checker) runCommand(ctx context.Context, name string, args ...string) e
 	return nil
 }
 
-func getEnv(key, defaultValue string) string {
-    if value := os.Getenv(key); value != "" {
-        return value
-    }
-    return defaultValue
-}
 
 func (c *Checker) sendReport(ctx context.Context, status string) error {
 	report := CheckReport{
