@@ -30,7 +30,7 @@ func main() {
 	defer cancel()
 
 	// 创建并运行检查器
-	c := checker.New()
+	c := checker.NewChecker(cfg)
 	success := c.Run(ctx)
 
 	if !success {

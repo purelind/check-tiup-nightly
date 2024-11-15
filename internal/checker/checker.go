@@ -16,6 +16,8 @@ import (
 	"syscall"
 
 	"github.com/purelind/check-tiup-nightly/pkg/logger"
+	"github.com/purelind/check-tiup-nightly/internal/notify"
+	"github.com/purelind/check-tiup-nightly/internal/config"
 )
 
 type Checker struct {
@@ -23,16 +25,18 @@ type Checker struct {
 	errors       []Error
 	versions     Versions
 	apiEndpoint  string
+	notifier     *notify.Notifier
 }
 
-func New() *Checker {
+func NewChecker(cfg *config.Config) *Checker {
 	return &Checker{
 		platformInfo: getPlatformInfo(),
 		errors:       make([]Error, 0),
 		versions: Versions{
-			Components: make(map[string]ComponentVersion),
+				Components: make(map[string]ComponentVersion),
 		},
-		apiEndpoint: getEnv("API_ENDPOINT", "http://localhost:5050/api/v1/status"),
+		apiEndpoint: cfg.APIEndpoint,
+		notifier:     notify.NewNotifier(),
 	}
 }
 
@@ -320,8 +324,26 @@ func (c *Checker) Run(ctx context.Context) bool {
 		logger.Info("Report sent successfully")
 	}
 
-	logger.Info(fmt.Sprintf("==================== Check completed with status: %s ====================", status))
-	return status == "success"
+	// 在发送报告后发送通知
+	if len(c.errors) > 0 {
+		errors := make([]notify.ErrorDetail, 0, len(c.errors))
+		for _, err := range c.errors {
+			errors = append(errors, notify.ErrorDetail{
+				Stage:     err.Stage,
+				Error:     err.Error,
+				Timestamp: err.Timestamp,
+			})
+		}
+		if err := c.notifier.SendFailureNotification(c.platformInfo.Platform, c.versions.TiUP, errors); err != nil {
+			logger.Error(fmt.Sprintf("Failed to send failure notification: %v", err))
+		}
+		return false
+	} else {
+		if err := c.notifier.SendSuccessNotification(c.platformInfo.Platform, c.versions.TiUP); err != nil {
+			logger.Error(fmt.Sprintf("Failed to send success notification: %v", err))
+		}
+		return true
+	}
 }
 
 // 辅助函数

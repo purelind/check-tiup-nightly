@@ -16,6 +16,7 @@ type Config struct {
     Server struct {
         Port int
     }
+    APIEndpoint string
     LogPath string
 }
 
@@ -31,6 +32,9 @@ func Load() *Config {
     
     // 服务器配置
     cfg.Server.Port = getEnvInt("SERVER_PORT", 5050)
+
+    // API配置
+    cfg.APIEndpoint = getEnv("API_ENDPOINT", "http://localhost:5050/api/v1/status")
     
     // 日志配置
     cfg.LogPath = getEnv("LOG_PATH", "logs/tiup_checker.log")
