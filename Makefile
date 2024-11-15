@@ -96,18 +96,10 @@ frontend-clean: ## Clean frontend build files
 	rm -rf $(FRONTEND_DIR)/.cache
 	@printf "$(GREEN)Frontend cleaned$(NC)\n"
 
-## Development-related targets
-dev: ## Start development environment (frontend & backend)
-	@printf "$(BLUE)Starting development environment...$(NC)\n"
-	make -j2 dev-server dev-frontend
-
 dev-server: build ## Start backend development server
 	@printf "$(BLUE)Starting backend server...$(NC)\n"
-	$(SERVER_BINARY) -config $(CONFIG_DIR)/config.yaml
+	$(SERVER_BINARY)
 
-dev-frontend: frontend-install ## Start frontend development server
-	@printf "$(BLUE)Starting frontend development server...$(NC)\n"
-	make frontend-dev
 
 ## Test-related targets
 test: test-backend
@@ -133,11 +125,11 @@ clean-frontend: ## Clean frontend build files
 ## Run-related targets
 run-server: $(SERVER_BINARY) ## Run server
 	@printf "$(BLUE)Starting server...$(NC)\n"
-	$(SERVER_BINARY) -config $(CONFIG_DIR)/config.yaml
+	$(SERVER_BINARY)
 
 run-checker: $(CHECKER_BINARY) ## Run checker
 	@printf "$(BLUE)Starting checker...$(NC)\n"
-	$(CHECKER_BINARY) -config $(CONFIG_DIR)/config.yaml
+	$(CHECKER_BINARY)
 
 ## Help
 help: ## Show help information

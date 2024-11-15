@@ -19,8 +19,7 @@ type Server struct {
 
 func New(db *database.DB, port int) *Server {
 	// 设置 gin 模式
-	// gin.SetMode(gin.ReleaseMode)
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	engine := gin.New()
 
