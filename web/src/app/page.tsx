@@ -1,4 +1,4 @@
-'use client';  // 因为我们使用了 useState，需要标记为客户端组件
+'use client';  // Because we used useState, it needs to be marked as a client component.
 
 import { useEffect, useState } from 'react';
 import { CheckResult } from '../types';
@@ -38,17 +38,6 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">TiUP Nightly Status</h1>
-          <div className={`mt-4 inline-flex items-center px-4 py-2 rounded-full ${
-            allSuccessful ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            <div className={`w-3 h-3 rounded-full mr-2 ${
-              allSuccessful ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            {allSuccessful ? '所有平台正常' : '存在异常平台'}
-          </div>
-        </div> */}
         <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-gray-900">TiUP Nightly Status</h1>
         <div className={`mt-6 p-4 rounded-lg ${
@@ -73,7 +62,7 @@ export default function HomePage() {
           {results.map((result) => (
             <div key={result.platform} className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-4">
-              {/* 修改标题为可点击的链接 */}
+              {/* Modify the title to be a clickable link */}
               <Link 
                 href={`/history/${encodeURIComponent(result.platform)}`}
                 className="text-lg font-semibold text-gray-900 hover:text-blue-600 hover:underline"
@@ -85,19 +74,18 @@ export default function HomePage() {
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-red-100 text-red-800'
               }`}>
-                {result.status === 'success' ? '正常' : '异常'}
+                {result.status === 'success' ? 'Normal' : 'Abnormal'}
               </span>
             </div>
               
               <div className="space-y-2 text-sm text-gray-600">
-                <p>检查时间: {new Date(result.timestamp).toLocaleString()}</p>
-                <p>TiUP 版本: {result.version.tiup}</p>
-                {result.version.python && <p>Python 版本: {result.version.python}</p>}
+                <p>Check Time: {new Date(result.timestamp).toLocaleString()}</p>
+                <p>TiUP Version: {result.version.tiup}</p>
                 
                 {/* 组件信息展示 */}
                 {result.version.components && Object.keys(result.version.components).length > 0 && (
                   <div className="mt-4">
-                    <p className="font-medium text-gray-700 mb-2">组件信息:</p>
+                    <p className="font-medium text-gray-700 mb-2">Component Information:</p>
                     <div className="grid grid-cols-2 gap-4">
                       {['tidb', 'pd', 'tikv', 'tiflash'].map((component) => {
                         const info = result.version.components?.[component];
@@ -106,13 +94,13 @@ export default function HomePage() {
                             <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
                             <div className="text-xs space-y-1">
                               <p className="truncate" title={info.full_version}>
-                                版本: {info.full_version}
+                                Version: {info.full_version}
                               </p>
                               <p className="truncate" title={info.git_hash}>
                                 Git: {info.git_hash.substring(0, 8)}
                               </p>
                               <p className="truncate" title={info.base_version}>
-                                基础版本: {info.base_version}
+                                Base Version: {info.base_version}
                               </p>
                             </div>
                           </div>

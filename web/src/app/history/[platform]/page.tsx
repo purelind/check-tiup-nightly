@@ -51,18 +51,18 @@ export default function PlatformHistory() {
             href="/"
             className="text-blue-600 hover:text-blue-800 mb-4 inline-block"
           >
-            ← 返回首页
+            ← Back to Home
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mt-4">
-            {decodeURIComponent(platform)} 检查历史
+            {decodeURIComponent(platform)} Check History
           </h1>
           
-          {/* 时间范围选择器 */}
+          {/* Time Range Selector */}
           <div className="mt-4 flex gap-4">
             {[
-              { label: '最近一天', value: '1' },
-              { label: '最近三天', value: '3' },
-              { label: '最近七天', value: '7' },
+              { label: 'Last Day', value: '1' },
+              { label: 'Last 3 Days', value: '3' },
+              { label: 'Last 7 Days', value: '7' },
             ].map(({ label, value }) => (
               <Link
                 key={value}
@@ -81,7 +81,7 @@ export default function PlatformHistory() {
 
         {results.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-            暂无检查记录
+            No check records found
           </div>
         ) : (
           <div className="space-y-4">
@@ -95,7 +95,7 @@ export default function PlatformHistory() {
                     <span className={`text-sm font-medium ${
                       result.status === 'success' ? 'text-green-800' : 'text-red-800'
                     }`}>
-                      {result.status === 'success' ? '正常' : '异常'}
+                      {result.status === 'success' ? 'Normal' : 'Abnormal'}
                     </span>
                   </div>
                   <span className="text-sm text-gray-600">
@@ -104,13 +104,13 @@ export default function PlatformHistory() {
                 </div>
                 
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p>TiUP 版本: {result.version.tiup}</p>
-                  {result.version.python && <p>Python 版本: {result.version.python}</p>}
+                  <p>TiUP Version: {result.version.tiup}</p>
+                  {result.version.python && <p>Python Version: {result.version.python}</p>}
                   
-                  {/* 组件信息展示 */}
+                  {/* Component Information Display */}
                   {result.version.components && Object.keys(result.version.components).length > 0 && (
                     <div className="mt-4">
-                      <p className="font-medium text-gray-700 mb-2">组件信息:</p>
+                      <p className="font-medium text-gray-700 mb-2">Component Information:</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {['tidb', 'pd', 'tikv', 'tiflash'].map((component) => {
                           const info = result.version.components?.[component];
@@ -119,13 +119,13 @@ export default function PlatformHistory() {
                               <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
                               <div className="text-xs space-y-1">
                                 <p className="truncate" title={info.full_version}>
-                                  版本: {info.full_version}
+                                  Version: {info.full_version}
                                 </p>
                                 <p className="truncate" title={info.git_hash}>
                                   Git: {info.git_hash.substring(0, 8)}
                                 </p>
                                 <p className="truncate" title={info.base_version}>
-                                  基础版本: {info.base_version}
+                                  Base Version: {info.base_version}
                                 </p>
                               </div>
                             </div>
