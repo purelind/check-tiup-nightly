@@ -32,14 +32,12 @@ jobs:
       - name: Install TiUP
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-          source ~/.bash_profile
+          export PATH=$PATH:${HOME}/.tiup/bin
           tiup update playground
 
       - name: Checkout TiUP Nightly
         run: |
-          source ~/.bash_profile
+          export PATH=$PATH:${HOME}/.tiup/bin
           make run-checker
         env:
           API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
-
-      
