@@ -37,6 +37,8 @@ jobs:
 
       - name: Checkout TiUP Nightly
         run: |
+          # Remove the existing nightly components to ensure a clean state
+          rm -rf ${HOME}/.tiup/components/
           export PATH=$PATH:${HOME}/.tiup/bin
           make run-checker
         env:
