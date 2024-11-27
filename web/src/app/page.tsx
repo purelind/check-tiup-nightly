@@ -80,9 +80,13 @@ export default function HomePage() {
               
               <div className="space-y-2 text-sm text-gray-600">
                 <p>Check Time: {new Date(result.timestamp).toLocaleString()}</p>
-                <p>TiUP Version: {result.version.tiup}</p>
+                <p>TiUP Version: {
+                  typeof result.version.tiup === 'string' 
+                    ? result.version.tiup.split(' ')[0].replace(/^v/, '')
+                    : 'Unknown'
+                }</p>
                 
-                {/* 组件信息展示 */}
+                {/* component information */}
                 {result.version.components && Object.keys(result.version.components).length > 0 && (
                   <div className="mt-4">
                     <p className="font-medium text-gray-700 mb-2">Component Information:</p>

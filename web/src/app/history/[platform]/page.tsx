@@ -18,7 +18,6 @@ export default function PlatformHistory() {
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        // 修改为实际的后端 API 地址
         const response = await fetch(`/api/history/${platform}?days=${days}`)
         if (!response.ok) {
           throw new Error('Failed to fetch history');
@@ -104,9 +103,11 @@ export default function PlatformHistory() {
                 </div>
                 
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p>TiUP Version: {result.version.tiup}</p>
-                  {result.version.python && <p>Python Version: {result.version.python}</p>}
-                  
+                  <p>TiUP Version: {
+                    typeof result.version.tiup === 'string' 
+                      ? result.version.tiup.split(' ')[0].replace(/^v/, '')
+                      : 'Unknown'
+                  }</p>
                   {/* Component Information Display */}
                   {result.version.components && Object.keys(result.version.components).length > 0 && (
                     <div className="mt-4">
