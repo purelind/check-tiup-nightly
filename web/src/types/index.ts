@@ -2,6 +2,7 @@ export interface ComponentInfo {
   full_version: string;
   base_version: string;
   git_hash: string;
+  commit_time: string;
 }
 
 export interface ErrorDetail {

@@ -93,11 +93,26 @@ export default function HomePage() {
                     <div className="grid grid-cols-2 gap-4">
                       {['tidb', 'pd', 'tikv', 'tiflash'].map((component) => {
                         const info = result.version.components?.[component];
-                        return info ? (
+                        if (!info) return null;
+                        
+                        const hasValidCommitTime = info.commit_time && info.commit_time !== "0001-01-01T00:00:00Z";
+                        
+                        // only calculate time difference when there is a valid commit_time
+                        let hoursDiff = 0;
+                        let isOld = false;
+                        
+                        if (hasValidCommitTime) {
+                          const commitTime = new Date(info.commit_time);
+                          const now = new Date();
+                          hoursDiff = Math.abs(now.getTime() - commitTime.getTime()) / (1000 * 60 * 60);
+                          isOld = hoursDiff > 24;
+                        }
+
+                        return (
                           <div key={component} className="bg-gray-50 rounded-lg p-3">
                             <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
                             <div className="text-xs space-y-1">
-                            <p className="truncate" title={info.git_hash}>
+                              <p className="truncate" title={info.git_hash}>
                                 Git: <a 
                                   href={`https://github.com/${
                                     component === 'pd' || component === 'tikv' 
@@ -117,9 +132,24 @@ export default function HomePage() {
                               <p className="truncate" title={info.base_version}>
                                 Base Version: {info.base_version}
                               </p>
+                              {/* only show time information when there is a valid commit_time */}
+                              {hasValidCommitTime ? (
+                                <p className={`truncate ${isOld ? 'text-amber-600 font-medium' : ''}`} 
+                                   title={new Date(info.commit_time).toLocaleString()}>
+                                  Commit Time: {
+                                    isOld 
+                                      ? `${Math.floor(hoursDiff)}h ago ⚠️` 
+                                      : new Date(info.commit_time).toLocaleString()
+                                  }
+                                </p>
+                              ) : (
+                                <p className="text-gray-400 italic">
+                                  Commit Time: Not available
+                                </p>
+                              )}
                             </div>
                           </div>
-                        ) : null;
+                        );
                       })}
                     </div>
                   </div>
