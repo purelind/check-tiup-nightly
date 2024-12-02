@@ -41,7 +41,7 @@ func Load() *Config {
     cfg.LogPath = getEnv("LOG_PATH", "logs/tiup_checker.log")
 
     // github token
-    cfg.GitHubToken = getEnv("API_GITHUB_TOKEN", "")
+    cfg.GitHubToken = getEnv("API_TOKEN", "")
 
     
     return cfg
