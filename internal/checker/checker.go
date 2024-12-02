@@ -96,7 +96,11 @@ func (c *Checker) checkTiUPDownload(ctx context.Context) error {
 func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 	logger.Info("Starting TiUP playground")
 
-	cmd := exec.CommandContext(ctx, "tiup", "playground", "nightly")
+	cmd := exec.CommandContext(ctx, "tiup", "playground", "nightly",
+		"--db", "1",
+		"--kv", "1",
+		"--pd", "1",
+		"--tiflash", "1")
 
 	_, err := cmd.StdoutPipe()
 	if err != nil {
