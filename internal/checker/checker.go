@@ -392,7 +392,7 @@ func (c *Checker) runCommand(ctx context.Context, name string, args ...string) e
 
 func (c *Checker) sendReport(ctx context.Context, status string) error {
 	report := CheckReport{
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Status:    status,
 		Platform:  c.platformInfo.Platform,
 		OS:        c.platformInfo.OS,
