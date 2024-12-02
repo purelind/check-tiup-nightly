@@ -192,17 +192,20 @@ func (c *Checker) runSmokeTest(ctx context.Context) error {
 
 func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error {
 	logger.Info("Checking version consistency...")
+	logger.Info("Querying information_schema.cluster_info...")
 	rows, err := db.QueryContext(ctx, "SELECT * FROM information_schema.cluster_info")
 	if err != nil {
-		c.recordError("version_check", fmt.Sprintf("Failed to query cluster info: %v", err))
+		c.recordError("version_check", fmt.Sprintf("Failed to query cluster_info: %v", err))
 		return err
 	}
 	defer rows.Close()
 
 	var referenceVersion string
+	var componentCount int
 	logger.Info("Scanning component versions...")
 
 	for rows.Next() {
+		componentCount++
 		var (
 			componentType, instance, statusAddr string
 			version, gitHash, startTime, uptime string
@@ -215,8 +218,11 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 			continue
 		}
 
+		logger.Info(fmt.Sprintf("Found component in cluster_info - Type: %s, Instance: %s, Status: %s",
+			componentType, instance, statusAddr))
+
 		if !isValidComponent(componentType) {
-			logger.Info(fmt.Sprintf("Skipping invalid component: %s", componentType))
+			logger.Info(fmt.Sprintf("Skipping invalid component: %s (not in allowed list: tidb, pd, tikv, tiflash)", componentType))
 			continue
 		}
 
@@ -254,7 +260,8 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 		}
 	}
 
-	logger.Info("Version consistency check completed")
+	logger.Info(fmt.Sprintf("Version consistency check completed. Total components found: %d", componentCount))
+	logger.Info(fmt.Sprintf("Components registered: %v", getMapKeys(c.versions.Components)))
 	return nil
 }
 
@@ -479,4 +486,12 @@ func (c *Checker) getGitHubCommitTime(ctx context.Context, component, hash strin
 	}
 
 	return result.Commit.Committer.Date, nil
+}
+
+func getMapKeys(m map[string]ComponentVersion) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
