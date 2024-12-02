@@ -18,6 +18,7 @@ type Config struct {
     }
     APIEndpoint string
     LogPath string
+    GitHubToken string
 }
 
 func Load() *Config {
@@ -38,6 +39,10 @@ func Load() *Config {
     
     // log configuration
     cfg.LogPath = getEnv("LOG_PATH", "logs/tiup_checker.log")
+
+    // github token
+    cfg.GitHubToken = getEnv("GITHUB_TOKEN", "")
+
     
     return cfg
 }

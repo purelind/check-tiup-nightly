@@ -1,22 +1,23 @@
 package checker
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"runtime"
 	"strings"
-	"time"
-	"encoding/json"
-	"net/http"
-	"bytes"
 	"syscall"
+	"time"
 
-	"github.com/purelind/check-tiup-nightly/pkg/logger"
-	"github.com/purelind/check-tiup-nightly/internal/notify"
+	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/purelind/check-tiup-nightly/internal/config"
+	"github.com/purelind/check-tiup-nightly/internal/notify"
+	"github.com/purelind/check-tiup-nightly/pkg/logger"
 )
 
 type Checker struct {
@@ -24,6 +25,7 @@ type Checker struct {
 	errors       []Error
 	versions     Versions
 	apiEndpoint  string
+	githubToken  string
 	notifier     *notify.Notifier
 }
 
@@ -32,10 +34,11 @@ func NewChecker(cfg *config.Config) *Checker {
 		platformInfo: getPlatformInfo(),
 		errors:       make([]Error, 0),
 		versions: Versions{
-				Components: make(map[string]ComponentVersion),
+			Components: make(map[string]ComponentVersion),
 		},
 		apiEndpoint: cfg.APIEndpoint,
-		notifier:     notify.NewNotifier(),
+		githubToken: cfg.GitHubToken,
+		notifier:    notify.NewNotifier(),
 	}
 }
 
@@ -198,15 +201,15 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 
 	var referenceVersion string
 	logger.Info("Scanning component versions...")
-	
+
 	for rows.Next() {
 		var (
 			componentType, instance, statusAddr string
 			version, gitHash, startTime, uptime string
-			serverId int
+			serverId                            int
 		)
 
-		if err := rows.Scan(&componentType, &instance, &statusAddr, &version, &gitHash, 
+		if err := rows.Scan(&componentType, &instance, &statusAddr, &version, &gitHash,
 			&startTime, &uptime, &serverId); err != nil {
 			logger.Error(fmt.Sprintf("Failed to scan row: %v", err))
 			continue
@@ -217,13 +220,13 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 			continue
 		}
 
-		commitTime, err := getGitHubCommitTime(ctx, componentType, gitHash)
+		commitTime, err := c.getGitHubCommitTime(ctx, componentType, gitHash)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Failed to get commit time for %s: %v", componentType, err))
 			commitTime = time.Time{} // if failed, use zero value
 		}
 
-		logger.Info(fmt.Sprintf("Component: %s, Version: %s, GitHash: %s, CommitTime: %s", 
+		logger.Info(fmt.Sprintf("Component: %s, Version: %s, GitHash: %s, CommitTime: %s",
 			componentType, version, gitHash, commitTime))
 
 		// validate git hash
@@ -257,7 +260,7 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 
 func (c *Checker) Run(ctx context.Context) bool {
 	logger.Info("==================== Starting TiUP checker ====================")
-	logger.Info(fmt.Sprintf("Platform: %s, OS: %s, Arch: %s", 
+	logger.Info(fmt.Sprintf("Platform: %s, OS: %s, Arch: %s",
 		c.platformInfo.Platform, c.platformInfo.OS, c.platformInfo.Arch))
 
 	status := "success"
@@ -380,15 +383,14 @@ func (c *Checker) runCommand(ctx context.Context, name string, args ...string) e
 	return nil
 }
 
-
 func (c *Checker) sendReport(ctx context.Context, status string) error {
 	report := CheckReport{
-		Timestamp:  time.Now(),
-		Status:     status,
-		Platform:   c.platformInfo.Platform,
-		OS:         c.platformInfo.OS,
-		Arch:       c.platformInfo.Arch,
-		Errors:     c.errors,
+		Timestamp: time.Now(),
+		Status:    status,
+		Platform:  c.platformInfo.Platform,
+		OS:        c.platformInfo.OS,
+		Arch:      c.platformInfo.Arch,
+		Errors:    c.errors,
 		Version: Versions{
 			TiUP:       c.versions.TiUP,
 			Components: c.versions.Components,
@@ -430,8 +432,7 @@ func (c *Checker) getTiUPVersion() string {
 	return strings.TrimSpace(string(output))
 }
 
-
-func getGitHubCommitTime(ctx context.Context, component, hash string) (time.Time, error) {
+func (c *Checker) getGitHubCommitTime(ctx context.Context, component, hash string) (time.Time, error) {
 	// component to repository mapping
 	repoMap := map[string]string{
 		"tidb":    "pingcap/tidb",
@@ -446,15 +447,14 @@ func getGitHubCommitTime(ctx context.Context, component, hash string) (time.Time
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/commits/%s", repo, hash)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
-	
-	// TODO: add github token to avoid rate limit
-	// req.Header.Set("Authorization", "token YOUR_GITHUB_TOKEN")
-	
+
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", c.githubToken))
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
