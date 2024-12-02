@@ -14,6 +14,7 @@ type ComponentVersion struct {
     FullVersion  string `json:"full_version"`
     BaseVersion  string `json:"base_version"`
     GitHash      string `json:"git_hash"`
+    CommitTime   time.Time `json:"commit_time"`
 }
 
 type Versions struct {

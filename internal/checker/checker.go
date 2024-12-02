@@ -217,8 +217,14 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 			continue
 		}
 
-		logger.Info(fmt.Sprintf("Component: %s, Version: %s, GitHash: %s", 
-			componentType, version, gitHash))
+		commitTime, err := getGitHubCommitTime(ctx, componentType, gitHash)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Failed to get commit time for %s: %v", componentType, err))
+			commitTime = time.Time{} // if failed, use zero value
+		}
+
+		logger.Info(fmt.Sprintf("Component: %s, Version: %s, GitHash: %s, CommitTime: %s", 
+			componentType, version, gitHash, commitTime))
 
 		// validate git hash
 		if len(gitHash) != 40 {
@@ -233,6 +239,7 @@ func (c *Checker) checkVersionConsistency(ctx context.Context, db *sql.DB) error
 			FullVersion: version,
 			BaseVersion: baseVersion,
 			GitHash:     gitHash,
+			CommitTime:  commitTime,
 		}
 
 		if referenceVersion == "" {
@@ -421,4 +428,55 @@ func (c *Checker) getTiUPVersion() string {
 		return "unknown"
 	}
 	return strings.TrimSpace(string(output))
+}
+
+
+func getGitHubCommitTime(ctx context.Context, component, hash string) (time.Time, error) {
+	// component to repository mapping
+	repoMap := map[string]string{
+		"tidb":    "pingcap/tidb",
+		"tikv":    "tikv/tikv",
+		"pd":      "tikv/pd",
+		"tiflash": "pingcap/tiflash",
+	}
+
+	repo, ok := repoMap[component]
+	if !ok {
+		return time.Time{}, fmt.Errorf("unknown component: %s", component)
+	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/commits/%s", repo, hash)
+	
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return time.Time{}, err
+	}
+	
+	// TODO: add github token to avoid rate limit
+	// req.Header.Set("Authorization", "token YOUR_GITHUB_TOKEN")
+	
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return time.Time{}, fmt.Errorf("GitHub API returned status: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Commit struct {
+			Committer struct {
+				Date time.Time `json:"date"`
+			} `json:"committer"`
+		} `json:"commit"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return time.Time{}, err
+	}
+
+	return result.Commit.Committer.Date, nil
 }
