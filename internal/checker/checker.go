@@ -406,6 +406,7 @@ func (c *Checker) sendReport(ctx context.Context, status string) error {
 	}
 
 	jsonData, err := json.Marshal(report)
+	logger.Info(fmt.Sprintf("Sending report: %s", string(jsonData)))
 	if err != nil {
 		return fmt.Errorf("failed to marshal report: %v", err)
 	}
@@ -464,7 +465,6 @@ func (c *Checker) getGitHubCommitTime(ctx context.Context, component, hash strin
 
 	if c.githubToken != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.githubToken))
-		logger.Info("GitHub token is configured")
 	} else {
 		logger.Error("GitHub token is empty")
 	}
