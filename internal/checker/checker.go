@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -454,13 +455,21 @@ func (c *Checker) getGitHubCommitTime(ctx context.Context, component, hash strin
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/commits/%s", repo, hash)
+	logger.Info(fmt.Sprintf("Requesting GitHub API: %s", url))
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", c.githubToken))
+	if c.githubToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.githubToken))
+		logger.Info("GitHub token is configured")
+	} else {
+		logger.Error("GitHub token is empty")
+	}
+
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -470,7 +479,9 @@ func (c *Checker) getGitHubCommitTime(ctx context.Context, component, hash strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return time.Time{}, fmt.Errorf("GitHub API returned status: %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		logger.Error(fmt.Sprintf("GitHub API error - Status: %d, Response: %s", resp.StatusCode, string(body)))
+		return time.Time{}, fmt.Errorf("GitHub API returned status: %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	var result struct {
