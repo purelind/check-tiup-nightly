@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -131,11 +132,11 @@ func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 	}
 	defer db.Close()
 
-	// try to connect 12 times, with 10 seconds interval
+	// try to connect to TiDB 12 times, with 10 seconds interval
 	for i := 0; i < 12; i++ {
 		if err := db.Ping(); err == nil {
 			logger.Info("Successfully connected to TiDB")
-			return cmd, nil
+			break
 		}
 
 		// check if the process has exited
@@ -147,7 +148,28 @@ func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 		time.Sleep(10 * time.Second)
 	}
 
-	return nil, fmt.Errorf("timeout waiting for TiDB to be ready")
+	// Add TiFlash readiness check
+	logger.Info("Waiting for TiFlash to be ready...")
+	for i := 0; i < 12; i++ {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:3930", 5*time.Second)
+		if err == nil {
+			conn.Close()
+			logger.Info("Successfully connected to TiFlash")
+			return cmd, nil
+		}
+
+		// check if the process has exited
+		if cmd.ProcessState != nil {
+			c.recordError("playground", "Playground process exited unexpectedly while waiting for TiFlash")
+			return nil, fmt.Errorf("playground process exited")
+		}
+
+		logger.Info("TiFlash not ready yet, waiting...")
+		time.Sleep(5 * time.Second)
+	}
+
+	c.recordError("playground", "Timeout waiting for TiFlash to be ready")
+	return nil, fmt.Errorf("timeout waiting for TiFlash to be ready")
 }
 
 func (c *Checker) runSmokeTest(ctx context.Context) error {

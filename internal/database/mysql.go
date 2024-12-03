@@ -114,6 +114,7 @@ func (db *DB) SaveCheckResult(ctx context.Context, report *checker.CheckReport) 
 	}
 
 	componentsJSON, err := json.Marshal(report.Version.Components)
+	logger.Info(fmt.Sprintf("Components: %s", string(componentsJSON)))
 	if err != nil {
 		return fmt.Errorf("failed to marshal components: %w", err)
 	}
