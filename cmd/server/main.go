@@ -51,18 +51,23 @@ func main() {
 	srv := server.New(db, cfg.Server.Port)
 
 	// setup cron job
-	c := cron.New()
-	_, err = c.AddFunc(cfg.CronSchedule, func() {
-		updateBranchCommits(ctx, db)
-	})
-	if err != nil {
-		logger.Error("Failed to schedule cron job:", err)
-		os.Exit(1)
+	var c *cron.Cron
+	if cfg.EnableCron {
+		c = cron.New()
+		_, err = c.AddFunc(cfg.CronSchedule, func() {
+			updateBranchCommits(ctx, db)
+		})
+		if err != nil {
+			logger.Error("Failed to schedule cron job:", err)
+			os.Exit(1)
+		} else {
+			logger.Info("Cron job scheduled:", cfg.CronSchedule)
+		}
+		c.Start()
+		defer c.Stop()
 	} else {
-		logger.Info("Cron job scheduled:", cfg.CronSchedule)
+		logger.Info("Cron job is disabled")
 	}
-	c.Start()
-	defer c.Stop()
 
 	// start server in a goroutine
 	go func() {

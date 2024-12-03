@@ -20,6 +20,7 @@ type Config struct {
     LogPath string
     GitHubToken string
     CronSchedule string
+    EnableCron   bool
 }
 
 func Load() *Config {
@@ -46,6 +47,7 @@ func Load() *Config {
 
     // cron schedule
     cfg.CronSchedule = getEnv("CRON_SCHEDULE", "*/30 * * * *")
+    cfg.EnableCron = getEnvBool("ENABLE_CRON", false)
 
     
     return cfg
@@ -62,6 +64,15 @@ func getEnvInt(key string, defaultValue int) int {
     if value := os.Getenv(key); value != "" {
         if i, err := strconv.Atoi(value); err == nil {
             return i
+        }
+    }
+    return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+    if value := os.Getenv(key); value != "" {
+        if b, err := strconv.ParseBool(value); err == nil {
+            return b
         }
     }
     return defaultValue
