@@ -40,6 +40,8 @@ NC := \033[0m # No Color
 ## Default target
 all: build frontend-build ## Build backend and frontend
 
+update-image: server-docker server-image-push frontend-docker frontend-image-push ## Update server and frontend docker images
+
 ## Build-related targets
 build: prepare $(SERVER_BINARY) $(CHECKER_BINARY) ## Build backend binaries
 
@@ -65,6 +67,16 @@ prepare: ## Prepare build environment
 	@mkdir -p $(BUILD_DIR) $(DIST_DIR) $(LOG_DIR)
 	@printf "$(GREEN)Build directories created$(NC)\n"
 
+server-docker: ## Build server for docker
+	@printf "$(BLUE)Building server for docker...$(NC)\n"
+	docker build -t hub.pingcap.net/jenkins/check-tiup-nightly:server .
+	@printf "$(GREEN)Server docker image built successfully$(NC)\n"
+
+server-image-push: ## Push server docker image
+	@printf "$(BLUE)Pushing server docker image...$(NC)\n"
+	docker push hub.pingcap.net/jenkins/check-tiup-nightly:server
+	@printf "$(GREEN)Server docker image pushed successfully$(NC)\n"
+
 ## Frontend-related targets
 frontend-install: ## Install frontend dependencies
 	@printf "$(BLUE)Installing frontend dependencies...$(NC)\n"
@@ -86,6 +98,16 @@ frontend-build: ## Build frontend for production
 	npm run build
 	@printf "$(GREEN)Frontend built successfully$(NC)\n"
 
+frontend-docker: ## Build frontend for docker
+	@printf "$(BLUE)Building frontend for docker...$(NC)\n"
+	cd $(FRONTEND_DIR) && \
+	docker build -t hub.pingcap.net/jenkins/check-tiup-nightly:web .
+	@printf "$(GREEN)Frontend docker image built successfully$(NC)\n"
+
+frontend-image-push: ## Push frontend docker image
+	@printf "$(BLUE)Pushing frontend docker image...$(NC)\n"
+	docker push hub.pingcap.net/jenkins/check-tiup-nightly:web
+	@printf "$(GREEN)Frontend docker image pushed successfully$(NC)\n"
 
 frontend-clean: ## Clean frontend build files
 	@printf "$(BLUE)Cleaning frontend build files...$(NC)\n"
