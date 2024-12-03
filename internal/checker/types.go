@@ -39,4 +39,11 @@ type CheckReport struct {
     Version   Versions     `json:"version"`
 }
 
+type BranchCommitInfo struct {
+    Component  string    `json:"component"`
+    Branch    string    `json:"branch"`
+    GitHash   string    `json:"git_hash"`
+    CommitTime time.Time `json:"commit_time"`
+    UpdatedAt  time.Time `json:"updated_at"`
+}
 

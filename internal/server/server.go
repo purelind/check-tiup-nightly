@@ -35,6 +35,8 @@ func New(db *database.DB, port int) *Server {
 		api.GET("/results/latest", h.GetLatestResults)
 		api.GET("/platforms/:platform/results", h.GetPlatformResults)
 		api.GET("/results/platforms/:platform/history", h.GetPlatformHistory)
+		api.POST("/branch-commits", h.UpdateBranchCommit)
+		api.GET("/branch-commits", h.GetBranchCommits)
 	}
 
 	srv := &http.Server{

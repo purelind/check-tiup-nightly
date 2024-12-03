@@ -160,3 +160,55 @@ func (h *Handler) GetPlatformHistory(c *gin.Context) {
 		"results":  results,
 	})
 }
+
+func (h *Handler) UpdateBranchCommit(c *gin.Context) {
+	var info checker.BranchCommitInfo
+	if err := c.ShouldBindJSON(&info); err != nil {
+		c.Error(NewError(http.StatusBadRequest, "Invalid request body"))
+		return
+	}
+	
+	if !isValidComponent(info.Component) {
+		c.Error(NewError(http.StatusBadRequest, "Invalid component"))
+		return
+	}
+	
+	if info.Branch == "" {
+		c.Error(NewError(http.StatusBadRequest, "Branch name is required"))
+		return
+	}
+	
+	if err := h.db.UpdateBranchCommit(c.Request.Context(), &info); err != nil {
+		logger.Error("Failed to update branch commit:", err)
+		c.Error(NewError(http.StatusInternalServerError, "Failed to update branch commit"))
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+
+func (h *Handler) GetBranchCommits(c *gin.Context) {
+	branch := c.Query("branch")
+	
+	results, err := h.db.GetBranchCommits(c.Request.Context(), branch)
+	if err != nil {
+		logger.Error("Failed to get branch commits:", err)
+		c.Error(NewError(http.StatusInternalServerError, "Failed to fetch branch commits"))
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"results": results,
+	})
+}
+
+var validComponents = map[string]bool{
+	"tidb":    true,
+	"tikv":    true,
+	"pd":      true,
+	"tiflash": true,
+}
+
+func isValidComponent(component string) bool {
+	return validComponents[component]
+}

@@ -96,6 +96,10 @@ func (db *DB) InitSchema(ctx context.Context) error {
 		return fmt.Errorf("failed to create check_results table: %w", err)
 	}
 
+	if _, err := db.db.ExecContext(ctx, createBranchCommitsTable); err != nil {
+		return fmt.Errorf("failed to create branch_commits table: %w", err)
+	}
+
 	return nil
 }
 
@@ -256,4 +260,72 @@ func (db *DB) queryResults(ctx context.Context, query string, args ...interface{
 	}
 
 	return results, nil
+}
+
+const createBranchCommitsTable = `
+CREATE TABLE IF NOT EXISTS branch_commits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    component VARCHAR(50) NOT NULL,
+    branch VARCHAR(100) NOT NULL,
+    git_hash CHAR(40) NOT NULL,
+    commit_time TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY idx_component_branch (component, branch)
+)`
+
+func (db *DB) UpdateBranchCommit(ctx context.Context, info *checker.BranchCommitInfo) error {
+	query := `
+        INSERT INTO branch_commits (component, branch, git_hash, commit_time)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            git_hash = VALUES(git_hash),
+            commit_time = VALUES(commit_time)
+    `
+	
+	_, err := db.db.ExecContext(ctx, query,
+		info.Component,
+		info.Branch,
+		info.GitHash,
+		info.CommitTime,
+	)
+	
+	return err
+}
+
+func (db *DB) GetBranchCommits(ctx context.Context, branch string) ([]checker.BranchCommitInfo, error) {
+	query := `
+        SELECT component, branch, git_hash, commit_time, updated_at
+        FROM branch_commits
+        WHERE component IN ('tidb', 'tikv', 'pd', 'tiflash')
+    `
+	args := []interface{}{}
+	
+	if branch != "" {
+		query += " AND branch = ?"
+		args = append(args, branch)
+	}
+	
+	rows, err := db.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var results []checker.BranchCommitInfo
+	for rows.Next() {
+		var info checker.BranchCommitInfo
+		err := rows.Scan(
+			&info.Component,
+			&info.Branch,
+			&info.GitHash,
+			&info.CommitTime,
+			&info.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, info)
+	}
+	
+	return results, rows.Err()
 }
