@@ -279,17 +279,18 @@ func (db *DB) UpdateBranchCommit(ctx context.Context, info *checker.BranchCommit
         VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             git_hash = VALUES(git_hash),
-            commit_time = VALUES(commit_time)
+            commit_time = VALUES(commit_time),
+            updated_at = CURRENT_TIMESTAMP
     `
-	
-	_, err := db.db.ExecContext(ctx, query,
-		info.Component,
-		info.Branch,
-		info.GitHash,
-		info.CommitTime,
-	)
-	
-	return err
+    
+    _, err := db.db.ExecContext(ctx, query,
+        info.Component,
+        info.Branch,
+        info.GitHash,
+        info.CommitTime,
+    )
+    
+    return err
 }
 
 func (db *DB) GetBranchCommits(ctx context.Context, branch string) ([]checker.BranchCommitInfo, error) {

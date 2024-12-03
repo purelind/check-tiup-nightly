@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/robfig/cron/v3"
+	"github.com/purelind/check-tiup-nightly/internal/checker"
 	"github.com/purelind/check-tiup-nightly/internal/config"
 	"github.com/purelind/check-tiup-nightly/internal/database"
 	"github.com/purelind/check-tiup-nightly/internal/server"
@@ -48,26 +50,55 @@ func main() {
 	// create and start server
 	srv := server.New(db, cfg.Server.Port)
 
-	// graceful shutdown handler
+	// setup cron job
+	c := cron.New()
+	_, err = c.AddFunc(cfg.CronSchedule, func() {
+		updateBranchCommits(ctx, db)
+	})
+	if err != nil {
+		logger.Error("Failed to schedule cron job:", err)
+		os.Exit(1)
+	} else {
+		logger.Info("Cron job scheduled:", cfg.CronSchedule)
+	}
+	c.Start()
+	defer c.Stop()
+
+	// start server in a goroutine
 	go func() {
-		if err := srv.Start(); err != nil {
-			logger.Error("Server error:", err)
+		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
+			logger.Error("Failed to start server:", err)
+			os.Exit(1)
 		}
 	}()
 
-	// wait for interrupt signal
+	// handle graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	// graceful shutdown
 	logger.Info("Shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Error("Server forced to shutdown:", err)
 	}
+}
 
-	logger.Info("Server exited")
+func updateBranchCommits(ctx context.Context, db *database.DB) {
+	components := []string{"tidb", "tikv", "pd", "tiflash"}
+	for _, component := range components {
+		// Fetch the latest commit info from GitHub API
+		info, err := checker.FetchLatestCommitInfo(ctx, component, "master")
+		if err != nil {
+			logger.Error("Failed to fetch commit info for", component, ":", err)
+			continue
+		}
+
+		// Update the database with the latest commit info
+		if err := db.UpdateBranchCommit(ctx, info); err != nil {
+			logger.Error("Failed to update commit info for", component, ":", err)
+		} else {
+			// log the latest commit info
+			logger.Info("Updated commit info for ", component, " ", info.Branch, ": ", info.GitHash)
+		}
+	}
 }

@@ -19,6 +19,7 @@ type Config struct {
     APIEndpoint string
     LogPath string
     GitHubToken string
+    CronSchedule string
 }
 
 func Load() *Config {
@@ -42,6 +43,9 @@ func Load() *Config {
 
     // github token
     cfg.GitHubToken = getEnv("GH_TOKEN", "")
+
+    // cron schedule
+    cfg.CronSchedule = getEnv("CRON_SCHEDULE", "*/30 * * * *")
 
     
     return cfg

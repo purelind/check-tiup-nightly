@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -527,4 +528,59 @@ func getMapKeys(m map[string]ComponentVersion) []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func FetchLatestCommitInfo(ctx context.Context, component, branch string) (*BranchCommitInfo, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/pingcap/%s/commits/%s", component, branch)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add GitHub token if needed
+	// get token from environment variable
+	token := os.Getenv("GH_TOKEN")
+	if token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	} else {
+		logger.Error("GitHub token is empty")
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch commit info: %s", resp.Status)
+	}
+
+	var result struct {
+		SHA     string `json:"sha"`
+		Commit  struct {
+			Committer struct {
+				Date string `json:"date"`
+			} `json:"committer"`
+		} `json:"commit"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	commitTime, err := time.Parse(time.RFC3339, result.Commit.Committer.Date)
+	if err != nil {
+		return nil, err
+	}
+
+	return &BranchCommitInfo{
+		Component:  component,
+		Branch:     branch,
+		GitHash:    result.SHA,
+		CommitTime: commitTime,
+	}, nil
 }
