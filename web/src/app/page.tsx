@@ -1,31 +1,57 @@
 'use client';  // Because we used useState, it needs to be marked as a client component.
 
 import { useEffect, useState } from 'react';
-import { CheckResult } from '../types';
+import { CheckResult, BranchCommit } from '../types';
 import Link from 'next/link';
+
 
 export default function HomePage() {
   const [results, setResults] = useState<CheckResult[]>([]);
+  const [branchCommits, setBranchCommits] = useState<BranchCommit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchResults = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/results');
-        const data = await response.json();
-        console.log(data);
-        setResults(data);
+        const [resultsResponse, branchCommitsResponse] = await Promise.all([
+          fetch('/api/results'),
+          fetch('/api/branch-commits?branch=master')
+        ]);
+        
+        const resultsData = await resultsResponse.json();
+        const branchCommitsData = await branchCommitsResponse.json();
+        
+        setResults(resultsData);
+        setBranchCommits(branchCommitsData.results || []);
       } catch (error) {
-        console.error('Failed to fetch results:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchResults();
+    fetchData();
   }, []);
 
   const allSuccessful = results.every(r => r.status === 'success');
+
+  const getCommitStatus = (component: string, currentHash: string) => {
+    const masterCommit = branchCommits.find(bc => bc.component === component);
+    if (!masterCommit) return null;
+
+    const isBehindMaster = currentHash !== masterCommit.git_hash;
+    const masterCommitTime = new Date(masterCommit.commit_time);
+    const now = new Date();
+    const hoursSinceMasterCommit = Math.abs(now.getTime() - masterCommitTime.getTime()) / (1000 * 60 * 60);
+    
+    if (isBehindMaster && hoursSinceMasterCommit > 13) {
+      return {
+        warning: true,
+        message: `${Math.floor(hoursSinceMasterCommit)}h behind master ⚠️`
+      };
+    }
+    return null;
+  };
 
   if (loading) {
     return (
@@ -96,8 +122,8 @@ export default function HomePage() {
                         if (!info) return null;
                         
                         const hasValidCommitTime = info.commit_time && info.commit_time !== "0001-01-01T00:00:00Z";
+                        const commitStatus = getCommitStatus(component, info.git_hash);
                         
-                        // only calculate time difference when there is a valid commit_time
                         let hoursDiff = 0;
                         let isOld = false;
                         
@@ -110,7 +136,14 @@ export default function HomePage() {
 
                         return (
                           <div key={component} className="bg-gray-50 rounded-lg p-3">
-                            <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
+                              {commitStatus?.warning && (
+                                <span className="text-xs text-amber-600 font-medium">
+                                  {commitStatus.message}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs space-y-1">
                               <p className="truncate" title={info.git_hash}>
                                 Git: <a 
@@ -137,9 +170,7 @@ export default function HomePage() {
                                 <p className={`truncate ${isOld ? 'text-amber-600 font-medium' : ''}`} 
                                    title={new Date(info.commit_time).toLocaleString()}>
                                   Commit Time: {
-                                    isOld 
-                                      ? `${Math.floor(hoursDiff)}h ago ⚠️` 
-                                      : new Date(info.commit_time).toLocaleString()
+                                    new Date(info.commit_time).toLocaleString()
                                   }
                                 </p>
                               ) : (

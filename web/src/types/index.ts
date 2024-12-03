@@ -27,3 +27,11 @@ export interface CheckResult {
   errors?: ErrorDetail[];
   version: VersionInfo;
 }
+
+export interface BranchCommit {
+  component: string;
+  branch: string;
+  git_hash: string;
+  commit_time: string;
+  updated_at: string;
+}
