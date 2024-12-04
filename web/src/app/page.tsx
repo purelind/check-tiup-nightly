@@ -124,10 +124,17 @@ export default function HomePage() {
                         
                         const commitStatus = getCommitStatus(component, info.git_hash, info.commit_time);
                         
+                        const displayName = {
+                          'tidb': 'TiDB',
+                          'pd': 'PD',
+                          'tikv': 'TiKV',
+                          'tiflash': 'TiFlash'
+                        }[component];
+                        
                         return (
                           <div key={component} className="bg-gray-50 rounded-lg p-3">
                             <div className="flex items-center justify-between">
-                              <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
+                              <p className="font-medium text-gray-800 mb-1">{displayName}</p>
                               {commitStatus?.warning && (
                                 <span className="text-xs text-amber-600 font-medium">
                                   {commitStatus.message}

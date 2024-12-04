@@ -117,22 +117,29 @@ export default function PlatformHistory() {
                           const info = result.version.components?.[component];
                           return info ? (
                             <div key={component} className="bg-gray-50 rounded-lg p-3">
-                              <p className="font-medium text-gray-800 mb-1 capitalize">{component}</p>
-                              <div className="text-xs space-y-1">
-                              <p className="truncate" title={info.git_hash}>
-                                Git: <a 
-                                  href={`https://github.com/${
-                                    component === 'pd' || component === 'tikv' 
-                                      ? 'tikv' 
-                                      : 'pingcap'
-                                  }/${component}/commit/${info.git_hash}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
-                                >
-                                  {info.git_hash.substring(0, 8)}
-                                </a>
+                              <p className="font-medium text-gray-800 mb-1">
+                                {{
+                                  'tidb': 'TiDB',
+                                  'pd': 'PD',
+                                  'tikv': 'TiKV',
+                                  'tiflash': 'TiFlash'
+                                }[component]}
                               </p>
+                              <div className="text-xs space-y-1">
+                                <p className="truncate" title={info.git_hash}>
+                                  Git: <a 
+                                    href={`https://github.com/${
+                                      component === 'pd' || component === 'tikv' 
+                                        ? 'tikv' 
+                                        : 'pingcap'
+                                    }/${component}/commit/${info.git_hash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    {info.git_hash.substring(0, 8)}
+                                  </a>
+                                </p>
                                 <p className="truncate" title={info.full_version}>
                                   Version: {info.full_version}
                                 </p>
