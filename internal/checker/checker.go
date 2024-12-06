@@ -297,15 +297,6 @@ func (c *Checker) Run(ctx context.Context) bool {
 	status := "success"
 	var playground *exec.Cmd
 
-	// download components check
-	logger.Info("Step 1: Checking TiUP downloads...")
-	if err := c.checkTiUPDownload(ctx); err != nil {
-		logger.Error(fmt.Sprintf("Download check failed: %v", err))
-		status = "failed"
-	} else {
-		logger.Info("Download check completed successfully")
-	}
-
 	// clean up tiup playground process
 	defer func() {
 		if playground != nil && playground.Process != nil {
@@ -337,28 +328,50 @@ func (c *Checker) Run(ctx context.Context) bool {
 		}
 	}()
 
-	logger.Info("Step 2: Starting playground...")
-	var err error
-	playground, err = c.startPlayground(ctx)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Playground startup failed: %v", err))
+	// Run all checks in sequence, stop if any fails
+	if success := c.runChecks(ctx, &playground); !success {
 		status = "failed"
-	} else {
-		logger.Info("Step 3: Running smoke tests...")
-		if err := c.runSmokeTest(ctx); err != nil {
-			logger.Error(fmt.Sprintf("Smoke tests failed: %v", err))
-			status = "failed"
-		} else {
-			logger.Info("Smoke tests completed successfully")
-		}
 	}
 
+	return c.sendResults(status)
+}
+
+func (c *Checker) runChecks(ctx context.Context, playground **exec.Cmd) bool {
+	// Step 1: Download check
+	logger.Info("Step 1: Checking TiUP downloads...")
+	if err := c.checkTiUPDownload(ctx); err != nil {
+		logger.Error(fmt.Sprintf("Download check failed: %v", err))
+		return false
+	}
+	logger.Info("Download check completed successfully")
+
+	// Step 2: Start playground
+	logger.Info("Step 2: Starting playground...")
+	var err error
+	*playground, err = c.startPlayground(ctx)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Playground startup failed: %v", err))
+		return false
+	}
+
+	// Step 3: Run smoke tests
+	logger.Info("Step 3: Running smoke tests...")
+	if err := c.runSmokeTest(ctx); err != nil {
+		logger.Error(fmt.Sprintf("Smoke tests failed: %v", err))
+		return false
+	}
+	logger.Info("Smoke tests completed successfully")
+
+	return true
+}
+
+func (c *Checker) sendResults(status string) bool {
 	// Get TiUP version before sending report
 	c.versions.TiUP = c.getTiUPVersion()
 
 	// Send report
 	logger.Info("Step 4: Sending report...")
-	if err := c.sendReport(ctx, status); err != nil {
+	if err := c.sendReport(context.Background(), status); err != nil {
 		logger.Error(fmt.Sprintf("Failed to send report: %v", err))
 	} else {
 		logger.Info("Report sent successfully")
@@ -378,12 +391,12 @@ func (c *Checker) Run(ctx context.Context) bool {
 			logger.Error(fmt.Sprintf("Failed to send failure notification: %v", err))
 		}
 		return false
-	} else {
-		if err := c.notifier.SendSuccessNotification(c.platformInfo.Platform, c.versions.TiUP); err != nil {
-			logger.Error(fmt.Sprintf("Failed to send success notification: %v", err))
-		}
-		return true
 	}
+
+	if err := c.notifier.SendSuccessNotification(c.platformInfo.Platform, c.versions.TiUP); err != nil {
+		logger.Error(fmt.Sprintf("Failed to send success notification: %v", err))
+	}
+	return true
 }
 
 // helper functions
