@@ -302,9 +302,9 @@ func (c *Checker) Run(ctx context.Context) bool {
 	if err := c.checkTiUPDownload(ctx); err != nil {
 		logger.Error(fmt.Sprintf("Download check failed: %v", err))
 		status = "failed"
-		return false
+	} else {
+		logger.Info("Download check completed successfully")
 	}
-	logger.Info("Download check completed successfully")
 
 	// clean up tiup playground process
 	defer func() {
