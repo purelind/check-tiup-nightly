@@ -108,6 +108,21 @@ export default function PlatformHistory() {
                       ? result.version.tiup.split(' ')[0].replace(/^v/, '')
                       : 'Unknown'
                   }</p>
+
+                  {/* Add error details section */}
+                  {result.status === 'failed' && result.errors && result.errors.length > 0 && (
+                    <div className="mt-4 p-4 bg-red-50 rounded-lg">
+                      <p className="font-medium text-red-800 mb-2">Errors:</p>
+                      {result.errors.map((error, index) => (
+                        <div key={index} className="mb-2 last:mb-0">
+                          <p className="text-red-700 font-medium">Stage: {error.stage}</p>
+                          <p className="text-red-600 whitespace-pre-wrap">{error.error}</p>
+                          <p className="text-red-500 text-xs">{new Date(error.timestamp).toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Component Information Display */}
                   {result.version.components && Object.keys(result.version.components).length > 0 && (
                     <div className="mt-4">
