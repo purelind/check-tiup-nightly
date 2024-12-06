@@ -33,7 +33,6 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
           export PATH=$PATH:${HOME}/.tiup/bin
-          tiup update playground
 
       - name: Checkout TiUP Nightly
         run: |
