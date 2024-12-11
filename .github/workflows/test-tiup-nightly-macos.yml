@@ -47,3 +47,5 @@ jobs:
         env:
           API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FEISHU_SUCCESS_WEBHOOK: ${{ secrets.FEISHU_SUCCESS_WEBHOOK }}
+          FEISHU_FAILURE_WEBHOOK: ${{ secrets.FEISHU_FAILURE_WEBHOOK }}
