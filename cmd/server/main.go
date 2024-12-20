@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/purelind/check-tiup-nightly/internal/checker"
 	"github.com/purelind/check-tiup-nightly/internal/config"
 	"github.com/purelind/check-tiup-nightly/internal/database"
 	"github.com/purelind/check-tiup-nightly/internal/server"
+	"github.com/purelind/check-tiup-nightly/internal/updater"
 	"github.com/purelind/check-tiup-nightly/pkg/logger"
 	"github.com/robfig/cron/v3"
 )
@@ -22,6 +22,7 @@ type App struct {
 	db     *database.DB
 	server *server.Server
 	cron   *cron.Cron
+	updater *service.Updater
 }
 
 func main() {
@@ -54,10 +55,13 @@ func initApp() (*App, error) {
 
 	srv := server.New(db, cfg.Server.Port)
 
+	updater := service.NewUpdater(db)
+
 	app := &App{
 		cfg:    cfg,
 		db:     db,
 		server: srv,
+		updater: updater,
 	}
 
 	if cfg.EnableCron {
@@ -96,7 +100,7 @@ func (a *App) initCronJob() error {
 	a.cron = cron.New()
 	_, err := a.cron.AddFunc(a.cfg.CronSchedule, func() {
 		ctx := context.Background()
-		if err := a.updateAllComponentsCommits(ctx); err != nil {
+		if err := a.updater.UpdateAllComponentsCommits(ctx); err != nil {
 			logger.Error("Failed to update components commits:", err)
 		}
 	})
@@ -126,8 +130,6 @@ func (a *App) waitForShutdown() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("Shutting down server...")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -141,30 +143,4 @@ func (a *App) cleanup() {
 	if a.cron != nil {
 		a.cron.Stop()
 	}
-}
-
-func (a *App) updateAllComponentsCommits(ctx context.Context) error {
-	components := []string{"tidb", "tikv", "pd", "tiflash"}
-
-	for _, component := range components {
-		if err := a.updateComponentCommit(ctx, component); err != nil {
-			logger.Error("Failed to update commit info for", component, ":", err)
-			continue
-		}
-	}
-	return nil
-}
-
-func (a *App) updateComponentCommit(ctx context.Context, component string) error {
-	info, err := checker.FetchLatestCommitInfo(ctx, component, "master")
-	if err != nil {
-		return err
-	}
-
-	if err := a.db.UpdateBranchCommit(ctx, info); err != nil {
-		return err
-	}
-
-	logger.Info("Updated commit info for", component, info.Branch, ":", info.GitHash)
-	return nil
 }
