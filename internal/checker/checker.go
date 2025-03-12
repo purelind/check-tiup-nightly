@@ -413,11 +413,27 @@ func isValidComponent(component string) bool {
 }
 
 func extractBaseVersion(version string) string {
+	// First split by dash to get parts like ["9.0.0", "beta.1.pre", "394", "g1feea49553"]
 	parts := strings.Split(version, "-")
-	if len(parts) >= 2 {
-		return strings.Join(parts[0:2], "-")
+	if len(parts) < 2 {
+		return version // Return as is if there's no dash
 	}
-	return version
+
+	// Take the first part (e.g., "9.0.0")
+	baseVersion := parts[0]
+
+	// For the second part, we need to extract just the base qualifier (e.g., "beta" from "beta.1.pre")
+	secondPart := parts[1]
+	qualifierParts := strings.Split(secondPart, ".")
+	if len(qualifierParts) > 0 {
+		// Add the base qualifier (e.g., "beta") to form "9.0.0-beta"
+		baseVersion = baseVersion + "-" + qualifierParts[0]
+	} else {
+		// If there are no dots, use the whole second part
+		baseVersion = baseVersion + "-" + secondPart
+	}
+
+	return baseVersion
 }
 
 func (c *Checker) runCommand(ctx context.Context, name string, args ...string) error {
@@ -561,7 +577,6 @@ func FetchLatestCommitInfo(ctx context.Context, component, branch string) (*Bran
 		logger.Error("GitHub token is empty")
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -575,8 +590,8 @@ func FetchLatestCommitInfo(ctx context.Context, component, branch string) (*Bran
 	}
 
 	var result struct {
-		SHA     string `json:"sha"`
-		Commit  struct {
+		SHA    string `json:"sha"`
+		Commit struct {
 			Committer struct {
 				Date string `json:"date"`
 			} `json:"committer"`
