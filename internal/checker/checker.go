@@ -106,7 +106,9 @@ func (c *Checker) startPlayground(ctx context.Context) (*exec.Cmd, error) {
 		"--db", "1",
 		"--kv", "1",
 		"--pd", "1",
-		"--tiflash", "1")
+		"--tiflash", "1",
+		"--tiflash.timeout", "240",
+	)
 
 	_, err := cmd.StdoutPipe()
 	if err != nil {
